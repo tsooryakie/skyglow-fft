@@ -252,22 +252,23 @@ def sumKernels():
     
     """Get the values of summed segments to produce a skyglow raster"""
     
-    segments = glob("./kernel_outputs/*.tif")
+    segments = glob("./kernel_outputs/*.tif") #Outputs each segment .tif file as a list
     
-    def load(name):
+    def load(name): #Loads each .tif file supplied to the function as a Numpy array
         
         with rio.open(name, "r") as ds:
             array = ds.read(1)
             
         return array
         
-    segment_list = []
+    segment_list = [] #Initialises empty list 
     for segment in range(len(segments)):
-        segment_list.append(load(segments[segment]))
+        segment_list.append(load(segments[segment])) #Appends each segment array to the list
     
-    summed_segments = sum(segment_list)
+    summed_segments = sum(segment_list) #sums all arrays within the list into a single Numpy array
     
     plt.imshow(summed_segments)
+    
     return summed_segments
 
 summed_segment_values = sumKernels()
