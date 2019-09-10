@@ -248,12 +248,11 @@ for angle in range(-180, 180, 10):
     writeRaster("brit_isles_padded5km.tif", "kernel_outputs/fft_segment_kerneltry_"+str(angle)+".tif", inverse) #Writes the FFT skyglow for each slice to a GeoTiff
 
 
-def findMaxKernel():
+def sumKernels():
     
-    """Stack the individual segment kernels and find the maximum values within
-        the stacked segments"""
+    """Get the values of summed segments to produce a skyglow raster"""
     
-    segments = glob("./kernel_outputs/*")
+    segments = glob("./kernel_outputs/*.tif")
     
     def load(name):
         
@@ -271,7 +270,7 @@ def findMaxKernel():
     plt.imshow(summed_segments)
     return summed_segments
 
-summed_segment_values = findMaxKernel()
+summed_segment_values = sumKernels()
 
 writeRaster("brit_isles_padded5km.tif", "kernel_outputs/fft_max_kernel_stack.tif", summed_segment_values)
     
