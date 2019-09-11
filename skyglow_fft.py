@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import rasterio as rio
 import matplotlib.pyplot as plt
@@ -5,6 +6,11 @@ from rasterio import Affine
 from rasterio.warp import calculate_default_transform, reproject, Resampling
 from glob import glob
 plt.style.use("seaborn-talk")
+
+try: 
+    os.system("rm ./kernel_outputs/*.tif")
+except:
+    pass
 
 def reprojectToUTM(tiff):
     
@@ -149,17 +155,17 @@ def computeKernels(tiff):
 
 theta, distance_kernel = computeKernels("brit_isles_padded5km.tif")
 
-distance_kernel[distance_kernel == 0] = 0.5
-distance_kernel[distance_kernel > 412000] = 0
-distance_kernel[distance_kernel < -412000] = 0
-distance_kernel[distance_kernel < 0] = 0
 
-distance_kernel = 1/np.log((distance_kernel/1000))**4.2844 #Applies the skyglow decay function to the kernel
-distance_kernel = np.nan_to_num(distance_kernel, 0)
+distance_kernel2 = 27.97202*np.e**(-0.00823*(distance_kernel/1000)) #Applies the skyglow decay function to the kernel
+distance_kernel2[distance_kernel == 0] = 0.5
+distance_kernel2[distance_kernel > 412000] = 0
+distance_kernel2[distance_kernel < -412000] = 0
+distance_kernel2[distance_kernel < 0] = 0
+distance_kernel2 = np.nan_to_num(distance_kernel2, 0)
 
-#plt.imshow(np.log(distance_kernel))
-#plt.title("Distance Kernel")
-#plt.show()
+plt.imshow(distance_kernel2)
+plt.title("Distance Kernel")
+plt.show()
 
 def calculateSegments(angle):
     
@@ -167,9 +173,9 @@ def calculateSegments(angle):
         Uses the theta (angle) array to create segments within the distance kernel,
         and computes the FFT/iFFT with those segments as a kernel."""
 
-    segment = np.where((theta > angle) & (theta < angle+10), distance_kernel, 0)
-    #plt.imshow(np.where((theta > angle) & (theta < angle+10), distance_kernel, 0))
-    #plt.show()
+    segment = np.where((theta > angle) & (theta < angle+10), distance_kernel2, 0)
+    plt.imshow(np.where((theta > angle) & (theta < angle+10), distance_kernel2, 0))
+    plt.show()
     
     return segment
 
@@ -182,26 +188,26 @@ def computeMagnitudeSpectrum(viirs, dist_kernel):
     fshift = np.fft.fftshift(f)
     log_spectrum = 20*np.log(np.abs(fshift))
     
-    #plt.subplot(121), plt.imshow(viirs, cmap = "gist_gray", vmin=0, vmax=1)
-    #plt.title("VIIRS image"), plt.xticks([]), plt.yticks([])
-    #plt.subplot(122), plt.imshow(log_spectrum, cmap = "gist_gray")
-    #plt.title("Magnitude Log Transform"), plt.xticks([]), plt.yticks([])
-    #plt.show()
+    plt.subplot(121), plt.imshow(viirs, cmap = "gist_gray", vmin=0, vmax=1)
+    plt.title("VIIRS image"), plt.xticks([]), plt.yticks([])
+    plt.subplot(122), plt.imshow(log_spectrum, cmap = "gist_gray")
+    plt.title("Magnitude Log Transform"), plt.xticks([]), plt.yticks([])
+    plt.show()
     
     dist_f = np.fft.fft2(dist_kernel)
     dist_fshift = np.fft.fftshift(dist_f)
     dist_log_spectrum = 20*np.log(np.abs(dist_fshift))
     
-    #plt.subplot(121), plt.imshow(dist_kernel, cmap = "gist_gray")
-    #plt.title("Distance Kernel"), plt.xticks([]), plt.yticks([])
-    #plt.subplot(122), plt.imshow(dist_log_spectrum, cmap = "gist_gray")
-    #plt.title("Magnitude Log Transform"), plt.xticks([]), plt.yticks([])
-    #plt.show()
+    plt.subplot(121), plt.imshow(dist_kernel, cmap = "gist_gray")
+    plt.title("Distance Kernel"), plt.xticks([]), plt.yticks([])
+    plt.subplot(122), plt.imshow(dist_log_spectrum, cmap = "gist_gray")
+    plt.title("Magnitude Log Transform"), plt.xticks([]), plt.yticks([])
+    plt.show()
     
     combinedFshift = fshift*dist_fshift
-    #plt.imshow(20*np.log(np.abs(combinedFshift)), cmap = "gist_gray")
-    #plt.title("Combined Magnitudes (Log Transformed)")
-    #plt.show()
+    plt.imshow(20*np.log(np.abs(combinedFshift)), cmap = "gist_gray")
+    plt.title("Combined Magnitudes (Log Transformed)")
+    plt.show()
     
     """Uncomment lines starting with 'plt' to show spatial/frequency domain outputs"""
     
