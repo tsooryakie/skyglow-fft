@@ -5,18 +5,17 @@ import matplotlib.pyplot as plt
 from rasterio import Affine
 from rasterio.warp import calculate_default_transform, reproject, Resampling
 from glob import glob
-plt.style.use("seaborn-talk")
 
 try: 
     os.system("rm ./kernel_outputs/*.tif")
 except:
     pass
 
-def reprojectToUTM(tiff):
+def reprojectToUTM(tiff, epsg_code):
     
     """Reproject a VIIRS raster from native-WGS84 to a UTM CRS e.g UTM 32N"""
     
-    dst_crs = "EPSG:25830" #destination Coordinate Reference System - refer to EPSG for CRS codes if UTM 32 is not appropriate
+    dst_crs = epsg_code #destination Coordinate Reference System - refer to EPSG for CRS codes if UTM 32 is not appropriate
     
     with rio.open(tiff, "r") as src: #opens the .tiff file using rasterio library
         
@@ -51,14 +50,12 @@ def reprojectToUTM(tiff):
             
     return viirs
 
-brit_viirs = reprojectToUTM("brit_isles_padded.tif")
 
-
-def downsample(viirs, name, factor):
+def downsample(epsg_code, viirs, name, factor):
     
     """Downsamples the input raster by a given scale e.g. dimensions/7 downsample the raster to ~5km per pixel resolution"""
     
-    dst_crs = "EPSG:25830" #EPSG code for UTM 32N
+    dst_crs = epsg_code #EPSG code for an UTM zone
     
     with rio.open(viirs, "r") as src:
         transform, width, height, = calculate_default_transform(
@@ -85,8 +82,6 @@ def downsample(viirs, name, factor):
         data = ds.read(1) #Return the new downsampled raster as an array
     
     return data
-
-brit_viirs = downsample("brit_isles_padded_utm.tif", name= "brit_isles_padded5km.tif", factor= 7)
 
 
 def computeKernels(tiff):
@@ -153,28 +148,15 @@ def computeKernels(tiff):
     
     return theta, distanceKernel
 
-theta, distance_kernel = computeKernels("brit_isles_padded5km.tif")
 
-
-distance_kernel2 = 27.97202*np.e**(-0.00823*(distance_kernel/1000)) #Applies the skyglow decay function to the kernel
-distance_kernel2[distance_kernel == 0] = 0.5
-distance_kernel2[distance_kernel > 412000] = 0
-distance_kernel2[distance_kernel < -412000] = 0
-distance_kernel2[distance_kernel < 0] = 0
-distance_kernel2 = np.nan_to_num(distance_kernel2, 0)
-
-plt.imshow(distance_kernel2)
-plt.title("Distance Kernel")
-plt.show()
-
-def calculateSegments(angle):
+def calculateSegments(theta, angle, distance_kernel):
     
     """Calculates the angles for segments in 10 degree range within the distance kernel.
         Uses the theta (angle) array to create segments within the distance kernel,
         and computes the FFT/iFFT with those segments as a kernel."""
 
-    segment = np.where((theta > angle) & (theta < angle+10), distance_kernel2, 0)
-    plt.imshow(np.where((theta > angle) & (theta < angle+10), distance_kernel2, 0))
+    segment = np.where((theta > angle) & (theta < angle+10), distance_kernel, 0)
+    plt.imshow(np.where((theta > angle) & (theta < angle+10), distance_kernel, 0))
     plt.show()
     
     return segment
@@ -243,17 +225,6 @@ def writeRaster(source, name, fft_inverse):
     return
 
 
-for angle in range(-180, 180, 10):
-    
-    segment_kernel = calculateSegments(angle) #Gets a new 10 degree slice of distance kernel each iteration
-
-    combined_fshift = computeMagnitudeSpectrum(brit_viirs, segment_kernel) #Calculates the FFT for a new slice each iteration
-    
-    inverse = computeInverseFourierTransform(combined_fshift) #Calculates the inverse of the FFT for each slice
-    
-    writeRaster("brit_isles_padded5km.tif", "kernel_outputs/fft_segment_kerneltry_"+str(angle)+".tif", inverse) #Writes the FFT skyglow for each slice to a GeoTiff
-
-
 def sumKernels():
     
     """Get the values of summed segments to produce a skyglow raster"""
@@ -277,7 +248,3 @@ def sumKernels():
     
     return summed_segments
 
-summed_segment_values = sumKernels()
-
-writeRaster("brit_isles_padded5km.tif", "kernel_outputs/fft_max_kernel_stack.tif", summed_segment_values)
-    
