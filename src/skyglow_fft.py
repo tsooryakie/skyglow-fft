@@ -6,18 +6,18 @@ from rasterio import Affine
 from rasterio.warp import calculate_default_transform, reproject, Resampling
 from glob import glob
 
-try: 
-    os.system("rm ./kernel_outputs/*.tif")
-except:
-    pass
 
-def reprojectToUTM(tiff, epsg_code):
-    
-    """Reproject a VIIRS raster from native-WGS84 to a UTM CRS e.g UTM 32N"""
-    
+def reproject_to_utm(viirs: str, epsg_code: str):
+    """
+    This function reprojects a VIIRS raster from native-WGS84 to a UTM CRS e.g UTM 32N
+    :param viirs: path to VIIRS image
+    :param epsg_code: EPSG coordinate system code
+    :return:
+    """
+
     dst_crs = epsg_code #destination Coordinate Reference System - refer to EPSG for CRS codes if UTM 32 is not appropriate
     
-    with rio.open(tiff, "r") as src: #opens the .tiff file using rasterio library
+    with rio.open(viirs, "r") as src: #opens the .tiff file using rasterio library
         
         transform, width, height, = calculate_default_transform(
                 src.crs, dst_crs, src.width, src.height, *src.bounds) #gets the geotransform, and raster width/height
@@ -30,7 +30,7 @@ def reprojectToUTM(tiff, epsg_code):
                 "height": height
                 }) #updates the metadata dictionary with the new UTM CRS
     
-        with rio.open(tiff.split(".tif")[0]+"_utm.tif", "w", **meta) as dst: #Reprojects the raster to the UTM CRS and writes the new raster file
+        with rio.open(viirs.split(".tif")[0]+"_utm.tif", "w", **meta) as dst: #Reprojects the raster to the UTM CRS and writes the new raster file
             reproject(
                     source=rio.band(src, 1),
                     destination=rio.band(dst, 1),
@@ -42,7 +42,7 @@ def reprojectToUTM(tiff, epsg_code):
             
             src.close()
                 
-    with rio.open(tiff.split(".tif")[0]+"_utm.tif", "r") as src:
+    with rio.open(viirs.split(".tif")[0]+"_utm.tif", "r") as src:
         
         viirs = src.read(1) #Reads the UTM VIIRS .tiff file and returns it as a numpy array
         
@@ -52,9 +52,16 @@ def reprojectToUTM(tiff, epsg_code):
 
 
 def downsample(epsg_code, viirs, name, factor):
-    
-    """Downsamples the input raster by a given scale e.g. dimensions/7 downsample the raster to ~5km per pixel resolution"""
-    
+    """
+    This function downsamples the input raster by a given scale.
+    E.g. dimensions/7 downsamples the raster to ~5km per pixel resolution
+    :param epsg_code:
+    :param viirs:
+    :param name:
+    :param factor:
+    :return:
+    """
+
     dst_crs = epsg_code #EPSG code for an UTM zone
     
     with rio.open(viirs, "r") as src:
@@ -84,10 +91,13 @@ def downsample(epsg_code, viirs, name, factor):
     return data
 
 
-def computeKernels(tiff):
-    
-    """Uses a UTM VIIRS .tiff file to compute a circular distance kernel (and degree/segmented kernel)"""
-    
+def compute_kernels(tiff):
+    """
+    This function uses a UTM VIIRS .tiff file to compute a circular distance kernel.
+    :param tiff:
+    :return:
+    """
+
     with rio.open(tiff, "r") as src:
         
         getTransform = src.get_transform() #Get the GeoTiff Transform metadata
@@ -149,11 +159,16 @@ def computeKernels(tiff):
     return theta, distanceKernel
 
 
-def calculateSegments(theta, angle, distance_kernel):
-    
-    """Calculates the angles for segments in 10 degree range within the distance kernel.
-        Uses the theta (angle) array to create segments within the distance kernel,
-        and computes the FFT/iFFT with those segments as a kernel."""
+def calculate_segments(theta, angle, distance_kernel):
+    """
+    This function calculates the angles for segments in 10 degree range within the distance kernel.
+    It uses the theta array to create segments within the distance kernel,
+    and computes the Fast Fourier Transform/Inverse Fast Fourier Transform with those segments as kernels.
+    :param theta:
+    :param angle:
+    :param distance_kernel:
+    :return:
+    """
 
     segment = np.where((theta > angle) & (theta < angle+10), distance_kernel, 0)
     plt.imshow(np.where((theta > angle) & (theta < angle+10), distance_kernel, 0))
@@ -161,11 +176,16 @@ def calculateSegments(theta, angle, distance_kernel):
     
     return segment
 
-def computeMagnitudeSpectrum(viirs, dist_kernel):
-    
-    """Transforms the input VIIRS image and segment distance kernel from
-            spatial domain into frequency domain using FFT"""
-    
+
+def compute_magnitude_spectrum(viirs, dist_kernel):
+    """
+    This function transforms the input VIIRS image and segment distance kernel from spatial domain,
+    into frequency domain using a Fast Fourier Transform.
+    :param viirs:
+    :param dist_kernel:
+    :return:
+    """
+
     f = np.fft.fft2(viirs)
     fshift = np.fft.fftshift(f)
     log_spectrum = 20*np.log(np.abs(fshift))
@@ -196,10 +216,14 @@ def computeMagnitudeSpectrum(viirs, dist_kernel):
     return combinedFshift
 
 
-def computeInverseFourierTransform(combined_magnitude):
-    
-    """Transforms the combined VIIRS and segment kernel image
-        from frequency domain back into the spatial domain"""
+def compute_inverse_fourier_transform(combined_magnitude):
+    """
+    This function computes the inverse FFT and transforms the combined VIIRS and segment kernel,
+    from frequency domain back into spatial domain.
+    :param combined_magnitude:
+    :return:
+    """
+
     
     inverse_f = np.fft.ifft2(combined_magnitude)
     inverse_fshift = np.fft.ifftshift(inverse_f)
@@ -207,14 +231,18 @@ def computeInverseFourierTransform(combined_magnitude):
     return np.abs(inverse_fshift)
 
 
-def writeRaster(source, name, fft_inverse):
-    
-    """Writes the combined inverse FFT image (back in spatial domain) to a GeoTiff raster"""
-       
+def write_raster(source, name, fft_inverse):
+    """
+    This function writes the combined inverse FFT image (in spatial domain) to a GeoTiff raster
+    :param source:
+    :param name:
+    :param fft_inverse:
+    :return:
+    """
+
     with rio.open(source, "r") as src:
         profile = src.profile
-    
-        
+
     with rio.open(name, "w", driver = "GTiff", 
                   height = fft_inverse.shape[0], width = fft_inverse.shape[1],
                   count = 1, dtype = rio.dtypes.float64,
@@ -225,10 +253,12 @@ def writeRaster(source, name, fft_inverse):
     return
 
 
-def sumKernels():
-    
-    """Get the values of summed segments to produce a skyglow raster"""
-    
+def sum_kernels():
+    """
+    This function computes the values of summed segments to produce a skyglow raster.
+    :return:
+    """
+
     segments = glob("./kernel_outputs/*.tif") #Outputs each segment .tif file as a list
     
     def load(name): #Loads each .tif file supplied to the function as a Numpy array
@@ -248,3 +278,11 @@ def sumKernels():
     
     return summed_segments
 
+
+def main():
+
+    return
+
+
+if __name__ == "__main__":
+    main()
