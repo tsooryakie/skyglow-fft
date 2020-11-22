@@ -1,1 +1,4 @@
 .idea/
+intermediates/
+*.tif
+__pycache__/
