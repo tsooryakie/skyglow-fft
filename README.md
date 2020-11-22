@@ -1,6 +1,6 @@
 ## Skyglow FFT
 This collection of Python scripts can be used to calculate horizontal skyglow maps
-via Fast Fourier Transforms, as opposed to usual, inefficient pixel-by-pixel methods.
+via Fast Fourier Transform (FFT), as opposed to usual, inefficient pixel-by-pixel methods.
 
 The dependencies for the scripts are:
 1. Numpy
