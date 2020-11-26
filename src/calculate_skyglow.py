@@ -183,7 +183,7 @@ def write_raster(
     return
 
 
-def sum_kernels(visualise: bool, write_to_raster: bool, *args: Any) -> np.ndarray:
+def sum_kernels(visualise: bool, write_to_raster: bool) -> np.ndarray:
     """
     This function sums the individual skyglow segments into a single array, which can be
     visualised and written as a standalone raster.
