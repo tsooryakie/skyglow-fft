@@ -6,7 +6,7 @@ import skyglow_utils
 import matplotlib.pyplot as plt
 import visualisation_utils as vis_utils
 from tqdm import tqdm
-from typing import Tuple, Any
+from typing import Tuple
 
 
 def compute_kernels(downsampled_viirs_path: str) -> Tuple[np.ndarray, np.ndarray]:
