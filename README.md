@@ -1,4 +1,4 @@
-## Skyglow FFT - Fast Fourier Transform based pipeline for calculation of skyglow extent
+## Skyglow FFT - Fast Fourier Transform based pipeline for calculation of skyglow extent from VIIRS-DNB imagery
 
 This Python script calculates **horizontal** skyglow from VIIRS-DNB images via a simple convolution
 using a Fast Fourier Transform (FFT), as opposed to usual, inefficient pixel-by-pixel methods.
