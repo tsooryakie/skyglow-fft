@@ -10,7 +10,7 @@ def reproject_to_utm(viirs_path: str, epsg_code: str, write_directory: str) -> N
     :param viirs_path: path to VIIRS image
     :param epsg_code: EPSG coordinate system code
     :param write_directory: Directory to save reprojected raster to
-    :return reprojected_viirs: Reprojected VIIRS raster
+    :return: Void
     """
 
     with rio.open(viirs_path, "r") as source:
