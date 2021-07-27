@@ -28,7 +28,7 @@ def visualise_transforms(
     :param distance_kernel: Distance kernel array
     :param distance_log_spectrum: Distance kernel array in Frequency domain (under log-transformation)
     :param combined_frequency_shift: Combined Frequency Shift array (under log-transformation)
-    :return:
+    :return: Void
     """
 
     plt.subplot(121), plt.imshow(viirs_raster, cmap="gist_gray", vmin=0, vmax=1)

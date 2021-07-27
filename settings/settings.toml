@@ -1,0 +1,19 @@
+title = "SKYGLOW SETTINGS"
+
+[rasters]
+raster_read_path = "../test-data/" # Enter the directory where the rasters you are processing are stored.
+
+[raster_preprocessing]
+downscaling_factor = 7
+epsg_code = "EPSG:3857" # Must be a metric projection, otherwise output will be incorrect
+
+[parameters]
+max_visibility_distance = 412000
+decay_constant = 27.97202
+decay_exponent = -0.00823
+visualise = false
+
+[product_directories]
+preprocessed = "../preprocessed_rasters/"
+intermediates = "../intermediates/"
+product_write_path = "../products/" # Model output directory

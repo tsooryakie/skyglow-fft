@@ -1,0 +1,5 @@
+tqdm>=4.61.2
+toml>=0.10.2
+rasterio>=1.1.0
+numpy>=1.19.2
+matplotlib>=3.3.4

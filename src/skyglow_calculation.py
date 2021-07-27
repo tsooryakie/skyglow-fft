@@ -1,12 +1,10 @@
 import os
-import sys
 import numpy as np
 import rasterio as rio
 import skyglow_utils
 import matplotlib.pyplot as plt
 import visualisation_utils as vis_utils
-from tqdm import tqdm
-from typing import Tuple
+from typing import Tuple, Dict
 
 
 def compute_kernels(downsampled_viirs_path: str) -> Tuple[np.ndarray, np.ndarray]:
@@ -33,7 +31,6 @@ def compute_kernels(downsampled_viirs_path: str) -> Tuple[np.ndarray, np.ndarray
     Creates 2-D arrays for X and Y dimensions of the kernel.
     Both arrays are then filled with sequence of numbers from 0 to N and 
     from 0 to -N from the middle row/column (0) of the array, outwards.
-    Changing anything here will most likely break the script... Terribly.
     """
 
     try:
@@ -71,20 +68,27 @@ def compute_kernels(downsampled_viirs_path: str) -> Tuple[np.ndarray, np.ndarray
     return theta_array, distance_kernel
 
 
-def compute_decayed_distance_kernel(distance_kernel: np.ndarray) -> np.ndarray:
+def compute_decayed_distance_kernel(
+    model_settings: Dict, distance_kernel: np.ndarray
+) -> np.ndarray:
     """
     This function generates the skyglow-decayed distance kernel via applying the decay function,
-    and masks values over distances where skyglow would not be visible (in this case, 412km from source).
+    and masks values over distances where skyglow would not be visible (in the default case, 412km from source).
+    :param model_settings: Model settings read from the settings.toml file.
     :param distance_kernel: Original, non-decayed distance kernel
     :return decayed_distance_kernel: Distance kernel with decay function applied, and skyglow visibility fixed.
     """
 
     decayed_distance_kernel = skyglow_utils.apply_decay_function(
-        distance_kernel=distance_kernel
+        distance_kernel=distance_kernel, model_settings=model_settings
     )
     decayed_distance_kernel[distance_kernel == 0] = 0.5
-    decayed_distance_kernel[distance_kernel > 412000] = 0
-    decayed_distance_kernel[distance_kernel < -412000] = 0
+    decayed_distance_kernel[
+        distance_kernel > model_settings["parameters"]["max_visibility_distance"]
+    ] = 0
+    decayed_distance_kernel[
+        distance_kernel < -model_settings["parameters"]["max_visibility_distance"]
+    ] = 0
     decayed_distance_kernel[distance_kernel < 0] = 0
     decayed_distance_kernel = np.nan_to_num(decayed_distance_kernel, 0)
 
@@ -160,7 +164,7 @@ def write_raster(
     :param downsampled_viirs_path: Path to a downsampled VIIRS image from which the georeference is used
     :param raster_write_path: Path to file which the skyglow segment is to be written to
     :param inverse_frequency_shift: Inverse frequency shift array for a given segment
-    :return:
+    :return: Void
     """
 
     with rio.open(downsampled_viirs_path, mode="r") as src:
@@ -183,21 +187,25 @@ def write_raster(
     return
 
 
-def sum_kernels(visualise: bool, write_to_raster: bool) -> np.ndarray:
+def sum_kernels(visualise: bool, model_settings: Dict) -> np.ndarray:
     """
     This function sums the individual skyglow segments into a single array, which can be
     visualised and written as a standalone raster.
     :param visualise: If true, visualises the summed output
-    :param write_to_raster: If true, saves the summed output as a raster
-    :return:
+    :param model_settings: Model settings from the settings.toml file
+    :return: Numpy array of summed segments
     """
 
-    skyglow_segment_rasters = os.listdir("../intermediates")
+    skyglow_segment_rasters = os.listdir(
+        model_settings["product_directories"]["intermediates"]
+    )
 
     skyglow_segments = []
     for skyglow_segment in skyglow_segment_rasters:
         skyglow_segments.append(
-            skyglow_utils.load_raster_as_array(f"../intermediates/{skyglow_segment}")
+            skyglow_utils.load_raster_as_array(
+                f"{model_settings['product_directories']['intermediates']}{skyglow_segment}"
+            )
         )
 
     summed_segments = sum(skyglow_segments)
@@ -217,7 +225,7 @@ def write_skyglow_raster(
     :param downsampled_viirs_path: Downsampled VIIRS raster to copy georeference from
     :param path_to_write: Path to write the raster to
     :param summed_segments: Summed skyglow array
-    :return:
+    :return: Void
     """
 
     with rio.open(downsampled_viirs_path, mode="r") as source:
@@ -237,49 +245,3 @@ def write_skyglow_raster(
         dst.write(summed_segments, 1)
 
     return
-
-
-def main() -> None:
-
-    downsampled_viirs_path = sys.argv[1]
-    downsampled_viirs_array = skyglow_utils.load_raster_as_array(
-        path_to_raster=downsampled_viirs_path
-    )
-    theta_array, distance_kernel = compute_kernels(downsampled_viirs_path=sys.argv[1])
-    decayed_distance_kernel = compute_decayed_distance_kernel(
-        distance_kernel=distance_kernel
-    )
-
-    for angle in tqdm(range(-180, 180, 10)):
-        segment = calculate_segments(
-            theta_array=theta_array,
-            angle=angle,
-            decayed_distance_kernel=decayed_distance_kernel,
-        )
-        combined_frequency_shift = compute_magnitude_spectrum(
-            downsampled_viirs=downsampled_viirs_array,
-            distance_kernel=segment,
-            visualise=False,
-        )
-        inverse_frequency_shift = skyglow_utils.compute_inverse_frequency_shifts(
-            combined_frequency_shift=combined_frequency_shift
-        )
-        write_raster(
-            downsampled_viirs_path=downsampled_viirs_path,
-            raster_write_path=f"../intermediates/skyglow_segment{angle}.tif",
-            inverse_frequency_shift=inverse_frequency_shift,
-        )
-
-    summed_segments = sum_kernels(visualise=True, write_to_raster=True)
-    write_skyglow_raster(
-        downsampled_viirs_path=downsampled_viirs_path,
-        path_to_write="skyglow_raster.tif",
-        summed_segments=summed_segments,
-    )
-    skyglow_utils.purge_intermediates()
-
-    return
-
-
-if __name__ == "__main__":
-    main()

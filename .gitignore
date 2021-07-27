@@ -2,3 +2,6 @@
 intermediates/
 *.tif
 __pycache__/
+preprocessed_rasters/
+products/
+test-data/
