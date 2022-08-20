@@ -22,7 +22,7 @@ To run the script, use `python main.py`.
 Please, ensure you set up the correct paths, directories and model parameters in the `settings.toml` file.
 
 Example output:
-![Skyglow Asia](.static/example_output.png)
+![Skyglow Asia](static/example_output.png)
 
 ### Background
 

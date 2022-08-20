@@ -1,11 +1,11 @@
 import os
 import shutil
-import raster_preprocessing
-import skyglow_calculation
-import skyglow_utils
+from src.preprocessing import raster_preprocessing
+from src.calculation import skyglow_calculation
+from src.utils import skyglow_utils
 from tqdm import tqdm
 
-MODEL_SETTINGS = skyglow_utils.parse_model_settings("../settings/settings.toml")
+MODEL_SETTINGS = skyglow_utils.parse_model_settings("../resources/settings.toml")
 KEEP_INTERMEDIATES = True
 
 

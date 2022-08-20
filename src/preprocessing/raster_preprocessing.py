@@ -1,5 +1,5 @@
 import rasterio as rio
-import skyglow_utils as utils
+from src.utils import skyglow_utils as utils
 from rasterio import Affine
 from rasterio.warp import calculate_default_transform
 

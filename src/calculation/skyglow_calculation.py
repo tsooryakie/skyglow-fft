@@ -1,9 +1,8 @@
 import os
 import numpy as np
 import rasterio as rio
-import skyglow_utils
+from src.utils import skyglow_utils, visualisation_utils as vis_utils
 import matplotlib.pyplot as plt
-import visualisation_utils as vis_utils
 from typing import Tuple, Dict
 
 
@@ -74,7 +73,7 @@ def compute_decayed_distance_kernel(
     """
     This function generates the skyglow-decayed distance kernel via applying the decay function,
     and masks values over distances where skyglow would not be visible (in the default case, 412km from source).
-    :param model_settings: Model settings read from the settings.toml file.
+    :param model_settings: Model resources read from the resources.toml file.
     :param distance_kernel: Original, non-decayed distance kernel
     :return decayed_distance_kernel: Distance kernel with decay function applied, and skyglow visibility fixed.
     """
@@ -192,7 +191,7 @@ def sum_kernels(visualise: bool, model_settings: Dict) -> np.ndarray:
     This function sums the individual skyglow segments into a single array, which can be
     visualised and written as a standalone raster.
     :param visualise: If true, visualises the summed output
-    :param model_settings: Model settings from the settings.toml file
+    :param model_settings: Model resources from the resources.toml file
     :return: Numpy array of summed segments
     """
 
